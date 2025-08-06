@@ -2,21 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Code, ArrowLeft, Play, FileText, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import Monaco from '@monaco-editor/react';
+import axios from 'axios';
+import { BACKEND_URL } from '../config';
+import { Step,File } from '../types';
 
-interface Step {
-  id: number;
-  title: string;
-  status: 'completed' | 'current' | 'pending';
-}
 
-interface File {
-  id: number;
-  name: string;
-  type: 'file' | 'folder';
-  content?: string;
-  children?: File[];
-  parentId?: number;
-}
 
 const EditorPage: React.FC = () => {
   const location = useLocation();
@@ -28,13 +18,7 @@ const EditorPage: React.FC = () => {
   const prompt = location.state?.prompt || '';
 
   // Mock data for demonstration
-  const [steps] = useState<Step[]>([
-    { id: 1, title: 'Analyzing prompt', status: 'completed' },
-    { id: 2, title: 'Generating structure', status: 'completed' },
-    { id: 3, title: 'Creating components', status: 'current' },
-    { id: 4, title: 'Styling application', status: 'pending' },
-    { id: 5, title: 'Optimizing code', status: 'pending' },
-  ]);
+  const [steps] = useState<Step[]>([]);
 
   const [files] = useState<File[]>([
     { 
@@ -59,6 +43,27 @@ const EditorPage: React.FC = () => {
     { id: 3, name: 'index.html', type: 'file', content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>AI Generated Website</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>` },
     { id: 4, name: 'package.json', type: 'file', content: `{\n  "name": "ai-generated-website",\n  "version": "1.0.0",\n  "description": "An AI-generated website",\n  "main": "index.js",\n  "scripts": {\n    "start": "react-scripts start",\n    "build": "react-scripts build"\n  },\n  "dependencies": {\n    "react": "^18.2.0",\n    "react-dom": "^18.2.0"\n  }\n}` }
   ]);
+
+  async function init() {
+    const response  = await axios.post(`${BACKEND_URL}/template`, { prompt });
+
+    const {prompts, uiPrompt, template} = response.data;
+
+    //Make a call to chats endpoint to send prompt to the llm
+    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+      messages: [...prompts, prompt].map((content, index) => ({
+        role: 'user',
+        content,
+      })),      
+    });
+
+
+
+  }
+
+  useEffect(() => {
+    init();
+  }, []);
 
   useEffect(() => {
     // Find the first file in the structure
