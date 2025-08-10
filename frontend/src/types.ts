@@ -1,5 +1,5 @@
 
-enum StepType{
+export enum StepType{
   CreateFile,
   CreateFolder,
   EditFile,

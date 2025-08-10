@@ -5,6 +5,7 @@ import Monaco from '@monaco-editor/react';
 import axios from 'axios';
 import { BACKEND_URL } from '../config';
 import { Step,File } from '../types';
+import { parseXml } from '../steps';
 
 
 
@@ -18,7 +19,7 @@ const EditorPage: React.FC = () => {
   const prompt = location.state?.prompt || '';
 
   // Mock data for demonstration
-  const [steps] = useState<Step[]>([]);
+  const [steps, setSteps] = useState<Step[]>([]);
 
   const [files] = useState<File[]>([
     { 
@@ -48,6 +49,10 @@ const EditorPage: React.FC = () => {
     const response  = await axios.post(`${BACKEND_URL}/template`, { prompt });
 
     const {prompts, uiPrompt, template} = response.data;
+
+    // Parse the XML response to extract steps
+    const parsedSteps = parseXml(uiPrompt);
+    setSteps(parsedSteps);
 
     //Make a call to chats endpoint to send prompt to the llm
     const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {

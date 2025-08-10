@@ -6,13 +6,20 @@ import { TextBlock } from "@anthropic-ai/sdk/resources/messages";
 import fs from "fs";
 import { basePrompt as Node_BASE_PROMPT } from "./defaults/node";
 import { basePrompt as React_BASE_PROMPT } from "./defaults/react";
+import cors from "cors";
 
 const app = express();
 
 const anthropic = new Anthropic();
 const model = "claude-3-5-sonnet-20241022";
 
+app.use(cors({
+  origin: "*", // Allow all origins for simplicity, adjust as needed
+  methods: "GET,POST,PUT,DELETE",
+  allowedHeaders: "Content-Type,Authorization",
+}));
 app.use(express.json());
+
 
 app.post("/template", async (req, res) => {
   const prompt = req.body.prompt;
@@ -57,7 +64,7 @@ app.post("/template", async (req, res) => {
   return;
 });
 
-app.post("/chats", async (req, res) => {
+app.post("/chat", async (req, res) => {
   const messages = req.body.messages;
   console.log("Messages received:", messages);
   const system = getSystemPrompt();
