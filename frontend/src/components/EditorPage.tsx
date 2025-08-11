@@ -52,7 +52,12 @@ const EditorPage: React.FC = () => {
 
     // Parse the XML response to extract steps
     const parsedSteps = parseXml(uiPrompt);
-    setSteps(parsedSteps);
+    setSteps(parsedSteps.map((step, index) => ({
+      ...step,
+      status: "completed",      
+    })));
+
+
 
     //Make a call to chats endpoint to send prompt to the llm
     const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
