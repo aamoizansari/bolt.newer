@@ -1,75 +1,141 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Code, ArrowLeft, Play, FileText, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
-import Monaco from '@monaco-editor/react';
-import axios from 'axios';
-import { BACKEND_URL } from '../config';
-import { Step,File } from '../types';
-import { parseXml } from '../steps';
-
-
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  Code,
+  ArrowLeft,
+  Play,
+  FileText,
+  Folder,
+  FolderOpen,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
+import Monaco from "@monaco-editor/react";
+import axios from "axios";
+import { BACKEND_URL } from "../config";
+import { Step, File, StepType } from "../types";
+import { parseXml } from "../steps";
 
 const EditorPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'code' | 'preview'>('code');
+  const [activeTab, setActiveTab] = useState<"code" | "preview">("code");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set([1]));
+  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(
+    new Set([1])
+  );
 
-  const prompt = location.state?.prompt || '';
+  const prompt = location.state?.prompt || "";
 
   // Mock data for demonstration
   const [steps, setSteps] = useState<Step[]>([]);
 
+  const appContent = `import React from 'react';\n\nfunction App() {\n  return (\n    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 text-white">\n      <header className="container mx-auto px-6 py-8">\n        <h1 className="text-4xl font-bold text-center">Welcome to Your Website</h1>\n      </header>\n      <main className="container mx-auto px-6 py-16">\n        <div className="text-center">\n          <p className="text-xl mb-8">This is your AI-generated website!</p>\n          <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">\n            Get Started\n          </button>\n        </div>\n      </main>\n    </div>\n  );\n}\n\nexport default App;`;
+  const dummyContent = `import React from 'react';\n\nconst Header: React.FC = () => {\n  return (\n    <header className="bg-gray-800 text-white p-4">\n      <h1 className="text-2xl font-bold">My Website</h1>\n    </header>\n  );\n};\n\nexport default Header;`;
+  const stylesContent = `/* Global Styles */\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n\nbody {\n  font-family: 'Inter', sans-serif;\n  line-height: 1.6;\n}\n\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n}`;
+  const indexContent = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>AI Generated Website</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>`;
+  const packageContent = `{\n  "name": "ai-generated-website",\n  "version": "1.0.0",\n  "description": "An AI-generated website",\n  "main": "index.js",\n  "scripts": {\n    "start": "react-scripts start",\n    "build": "react-scripts build"\n  },\n  "dependencies": {\n    "react": "^18.2.0",\n    "react-dom": "^18.2.0"\n  }\n}`;
+
   const [files] = useState<File[]>([
-    { 
-      id: 1, 
-      name: 'src', 
-      type: 'folder',
+    {
+      id: 1,
+      name: "src",
+      type: "folder",
+      path: "/src",
       children: [
-        { id: 2, name: 'App.tsx', type: 'file', parentId: 1, content: `import React from 'react';\n\nfunction App() {\n  return (\n    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 text-white">\n      <header className="container mx-auto px-6 py-8">\n        <h1 className="text-4xl font-bold text-center">Welcome to Your Website</h1>\n      </header>\n      <main className="container mx-auto px-6 py-16">\n        <div className="text-center">\n          <p className="text-xl mb-8">This is your AI-generated website!</p>\n          <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">\n            Get Started\n          </button>\n        </div>\n      </main>\n    </div>\n  );\n}\n\nexport default App;` },
-        { 
-          id: 5, 
-          name: 'components', 
-          type: 'folder', 
+        {
+          id: 2,
+          name: "App.tsx",
+          type: "file",
           parentId: 1,
-          children: [
-            { id: 6, name: 'Header.tsx', type: 'file', parentId: 5, content: `import React from 'react';\n\nconst Header: React.FC = () => {\n  return (\n    <header className="bg-gray-800 text-white p-4">\n      <h1 className="text-2xl font-bold">My Website</h1>\n    </header>\n  );\n};\n\nexport default Header;` },
-            { id: 7, name: 'Footer.tsx', type: 'file', parentId: 5, content: `import React from 'react';\n\nconst Footer: React.FC = () => {\n  return (\n    <footer className="bg-gray-800 text-white p-4 text-center">\n      <p>&copy; 2025 My Website. All rights reserved.</p>\n    </footer>\n  );\n};\n\nexport default Footer;` }
-          ]
+          content: appContent,
+          path: "/src/App.tsx",
         },
-        { id: 8, name: 'styles.css', type: 'file', parentId: 1, content: `/* Global Styles */\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n\nbody {\n  font-family: 'Inter', sans-serif;\n  line-height: 1.6;\n}\n\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n}` }
-      ]
+        {
+          id: 5,
+          name: "components",
+          type: "folder",
+          parentId: 1,
+          path: "/src/components",
+          children: [
+            {
+              id: 6,
+              name: "Header.tsx",
+              type: "file",
+              parentId: 5,
+              content: dummyContent,
+              path: "/src/components/Header.tsx",
+            },
+            {
+              id: 7,
+              name: "Footer.tsx",
+              type: "file",
+              parentId: 5,
+              content: dummyContent,
+              path: "/src/components/Footer.tsx",
+            },
+          ],
+        },
+        {
+          id: 8,
+          name: "styles.css",
+          type: "file",
+          parentId: 1,
+          content: stylesContent,
+          path: "/src/styles.css",
+        },
+      ],
     },
-    { id: 3, name: 'index.html', type: 'file', content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>AI Generated Website</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>` },
-    { id: 4, name: 'package.json', type: 'file', content: `{\n  "name": "ai-generated-website",\n  "version": "1.0.0",\n  "description": "An AI-generated website",\n  "main": "index.js",\n  "scripts": {\n    "start": "react-scripts start",\n    "build": "react-scripts build"\n  },\n  "dependencies": {\n    "react": "^18.2.0",\n    "react-dom": "^18.2.0"\n  }\n}` }
+    {
+      id: 3,
+      name: "index.html",
+      type: "file",
+      content:  indexContent,
+      path: "/index.html",
+    },
+    {
+      id: 4,
+      name: "package.json",
+      type: "file",
+      content: packageContent,
+      path: "/package.json",
+    },
   ]);
 
   async function init() {
-    const response  = await axios.post(`${BACKEND_URL}/template`, { prompt });
+    const response = await axios.post(`${BACKEND_URL}/template`, { prompt });
 
-    const {prompts, uiPrompt, template} = response.data;
+    const { prompts, uiPrompt, template } = response.data;
 
     // Parse the XML response to extract steps
     const parsedSteps = parseXml(uiPrompt);
-    setSteps(parsedSteps.map((step, index) => ({
-      ...step,
-      status: "completed",      
-    })));
-
-
+    setSteps(
+      parsedSteps.map((step, index) => ({
+        ...step,
+        status: "pending",
+      }))
+    );
 
     //Make a call to chats endpoint to send prompt to the llm
     const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
       messages: [...prompts, prompt].map((content, index) => ({
-        role: 'user',
+        role: "user",
         content,
-      })),      
+      })),
     });
-
-
-
   }
+
+  useEffect(() => {
+  
+    const step = steps.find((s) => s.status === "pending");
+    if (step?.type === StepType.CreateFile) {
+      const file = files.find((f) => f.path === step.path);
+      if (file) {
+        
+      }
+    }
+  
+  }, [steps,files]);
 
   useEffect(() => {
     init();
@@ -79,7 +145,7 @@ const EditorPage: React.FC = () => {
     // Find the first file in the structure
     const findFirstFile = (fileList: File[]): File | null => {
       for (const file of fileList) {
-        if (file.type === 'file') {
+        if (file.type === "file") {
           return file;
         }
         if (file.children) {
@@ -97,7 +163,7 @@ const EditorPage: React.FC = () => {
   }, [files]);
 
   const toggleFolder = (folderId: number) => {
-    setExpandedFolders(prev => {
+    setExpandedFolders((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(folderId)) {
         newSet.delete(folderId);
@@ -113,18 +179,20 @@ const EditorPage: React.FC = () => {
       <div key={file.id}>
         <button
           onClick={() => {
-            if (file.type === 'folder') {
+            if (file.type === "folder") {
               toggleFolder(file.id);
             } else {
               setSelectedFile(file);
             }
           }}
           className={`w-full text-left p-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2 ${
-            selectedFile?.id === file.id ? 'bg-blue-900/30 border border-blue-700' : ''
+            selectedFile?.id === file.id
+              ? "bg-blue-900/30 border border-blue-700"
+              : ""
           }`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
         >
-          {file.type === 'folder' ? (
+          {file.type === "folder" ? (
             <>
               {expandedFolders.has(file.id) ? (
                 <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -145,20 +213,24 @@ const EditorPage: React.FC = () => {
           )}
           <span className="text-sm">{file.name}</span>
         </button>
-        {file.type === 'folder' && file.children && expandedFolders.has(file.id) && (
-          <div>
-            {renderFileTree(file.children, depth + 1)}
-          </div>
-        )}
+        {file.type === "folder" &&
+          file.children &&
+          expandedFolders.has(file.id) && (
+            <div>{renderFileTree(file.children, depth + 1)}</div>
+          )}
       </div>
     ));
   };
 
   const renderPreview = () => {
-    if (!selectedFile?.content) return <div className="text-gray-400">Select a file to preview</div>;
-    
+    if (!selectedFile?.content)
+      return <div className="text-gray-400">Select a file to preview</div>;
+
     // Simple preview for HTML/React content
-    if (selectedFile.name.endsWith('.tsx') || selectedFile.name.endsWith('.html')) {
+    if (
+      selectedFile.name.endsWith(".tsx") ||
+      selectedFile.name.endsWith(".html")
+    ) {
       return (
         <div className="w-full h-full bg-white">
           <iframe
@@ -193,7 +265,7 @@ const EditorPage: React.FC = () => {
         </div>
       );
     }
-    
+
     return (
       <div className="p-4 text-gray-400">
         Preview not available for this file type
@@ -208,7 +280,7 @@ const EditorPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate("/")}
               className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -241,30 +313,32 @@ const EditorPage: React.FC = () => {
               <div
                 key={step.id}
                 className={`flex items-center space-x-3 p-3 rounded-lg ${
-                  step.status === 'completed'
-                    ? 'bg-green-900/30 border border-green-700'
-                    : step.status === 'current'
-                    ? 'bg-blue-900/30 border border-blue-700'
-                    : 'bg-gray-700/30 border border-gray-600'
+                  step.status === "completed"
+                    ? "bg-green-900/30 border border-green-700"
+                    : step.status === "current"
+                    ? "bg-blue-900/30 border border-blue-700"
+                    : "bg-gray-700/30 border border-gray-600"
                 }`}
               >
                 <div
                   className={`w-3 h-3 rounded-full ${
-                    step.status === 'completed'
-                      ? 'bg-green-500'
-                      : step.status === 'current'
-                      ? 'bg-blue-500 animate-pulse'
-                      : 'bg-gray-500'
+                    step.status === "completed"
+                      ? "bg-green-500"
+                      : step.status === "current"
+                      ? "bg-blue-500 animate-pulse"
+                      : "bg-gray-500"
                   }`}
                 />
                 <span className="text-sm">{step.title}</span>
               </div>
             ))}
           </div>
-          
+
           {/* Prompt Display */}
           <div className="mt-8">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Original Prompt:</h3>
+            <h3 className="text-sm font-medium text-gray-400 mb-2">
+              Original Prompt:
+            </h3>
             <div className="bg-gray-700/50 rounded-lg p-3 text-sm text-gray-300 max-h-32 overflow-y-auto">
               {prompt}
             </div>
@@ -277,9 +351,7 @@ const EditorPage: React.FC = () => {
             <Folder className="w-5 h-5 mr-2" />
             Files
           </h2>
-          <div className="space-y-1">
-            {renderFileTree(files)}
-          </div>
+          <div className="space-y-1">{renderFileTree(files)}</div>
         </div>
 
         {/* Code/Preview Section - 50% */}
@@ -288,21 +360,21 @@ const EditorPage: React.FC = () => {
           <div className="bg-gray-800 border-b border-gray-700 px-4 py-2">
             <div className="flex space-x-1">
               <button
-                onClick={() => setActiveTab('code')}
+                onClick={() => setActiveTab("code")}
                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  activeTab === 'code'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  activeTab === "code"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700"
                 }`}
               >
                 Code
               </button>
               <button
-                onClick={() => setActiveTab('preview')}
+                onClick={() => setActiveTab("preview")}
                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  activeTab === 'preview'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  activeTab === "preview"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700"
                 }`}
               >
                 Preview
@@ -312,25 +384,26 @@ const EditorPage: React.FC = () => {
 
           {/* Content */}
           <div className="flex-1 bg-gray-900">
-            {activeTab === 'code' ? (
+            {activeTab === "code" ? (
               selectedFile ? (
                 <Monaco
                   height="100%"
                   language={
-                    selectedFile.name.endsWith('.tsx') || selectedFile.name.endsWith('.ts')
-                      ? 'typescript'
-                      : selectedFile.name.endsWith('.html')
-                      ? 'html'
-                      : selectedFile.name.endsWith('.css')
-                      ? 'css'
-                      : 'plaintext'
+                    selectedFile.name.endsWith(".tsx") ||
+                    selectedFile.name.endsWith(".ts")
+                      ? "typescript"
+                      : selectedFile.name.endsWith(".html")
+                      ? "html"
+                      : selectedFile.name.endsWith(".css")
+                      ? "css"
+                      : "plaintext"
                   }
-                  value={selectedFile.content || ''}
+                  value={selectedFile.content || ""}
                   theme="vs-dark"
                   options={{
                     minimap: { enabled: false },
                     fontSize: 14,
-                    lineNumbers: 'on',
+                    lineNumbers: "on",
                     roundedSelection: false,
                     scrollBeyondLastLine: false,
                     automaticLayout: true,

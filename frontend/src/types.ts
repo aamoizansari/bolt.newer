@@ -15,6 +15,7 @@ export interface Step {
   type: StepType;
   status: 'completed' | 'current' | 'pending';
   code?: string;
+  path?: string;    // Optional path for file or folder steps, ideally should be required for CreateFile and CreateFolder, Edit and DeleteFile
 }
 
 export interface File {
@@ -24,4 +25,5 @@ export interface File {
   content?: string;
   children?: File[];
   parentId?: number;
+  path:string; // Full path of the file or folder
 }

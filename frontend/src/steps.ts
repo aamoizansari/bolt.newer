@@ -60,30 +60,35 @@ export function parseXml(response: string): Step[] {
     let stepType: StepType;
     let stepTitle: string;
     let stepDescription: string;
+    let stepPath: string | null;
 
     switch (type.toLowerCase()) {
       case 'file':
         stepType = StepType.CreateFile;
         stepTitle = filePath ? `Create ${filePath}` : 'Create file';
         stepDescription = filePath ? `Create file: ${filePath}` : 'Create a new file';
+        stepPath = filePath;
         break;
       
       case 'folder':
         stepType = StepType.CreateFolder;
         stepTitle = filePath ? `Create folder ${filePath}` : 'Create folder';
         stepDescription = filePath ? `Create folder: ${filePath}` : 'Create a new folder';
+        stepPath = filePath;
         break;
       
       case 'edit':
         stepType = StepType.EditFile;
         stepTitle = filePath ? `Edit ${filePath}` : 'Edit file';
         stepDescription = filePath ? `Edit file: ${filePath}` : 'Edit a file';
+        stepPath = filePath;         
         break;
       
       case 'delete':
         stepType = StepType.DeleteFile;
         stepTitle = filePath ? `Delete ${filePath}` : 'Delete file';
         stepDescription = filePath ? `Delete file: ${filePath}` : 'Delete a file';
+        stepPath = filePath;
         break;
       
       case 'shell':
@@ -92,12 +97,14 @@ export function parseXml(response: string): Step[] {
         const command = cleanContent.split('\n')[0] || cleanContent;
         stepTitle = `Run ${command}`;
         stepDescription = `Execute shell command: ${command}`;
+        stepPath = null;
         break;
       
       default:
         stepType = StepType.CreateFile;
         stepTitle = `Unknown action: ${type}`;
         stepDescription = `Process action of type: ${type}`;
+        stepPath = null;
     }
 
     steps.push({
@@ -106,7 +113,8 @@ export function parseXml(response: string): Step[] {
       description: stepDescription,
       type: stepType,
       status: 'pending',
-      code: cleanContent || undefined
+      code: cleanContent || undefined,
+      path: stepPath || undefined
     });
   }
 
