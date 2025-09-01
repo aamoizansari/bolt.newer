@@ -15,6 +15,7 @@ import axios from "axios";
 import { BACKEND_URL } from "../config";
 import { Step, File, StepType } from "../types";
 import { parseXml } from "../steps";
+import { processSteps, syncFileContent } from "../helper/fileTreeUtils";
 
 const EditorPage: React.FC = () => {
   const location = useLocation();
@@ -36,7 +37,7 @@ const EditorPage: React.FC = () => {
   const indexContent = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>AI Generated Website</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>`;
   const packageContent = `{\n  "name": "ai-generated-website",\n  "version": "1.0.0",\n  "description": "An AI-generated website",\n  "main": "index.js",\n  "scripts": {\n    "start": "react-scripts start",\n    "build": "react-scripts build"\n  },\n  "dependencies": {\n    "react": "^18.2.0",\n    "react-dom": "^18.2.0"\n  }\n}`;
 
-  const [files] = useState<File[]>([
+  const [files, setFiles] = useState<File[]>([
     {
       id: 1,
       name: "src",
@@ -126,16 +127,50 @@ const EditorPage: React.FC = () => {
   }
 
   useEffect(() => {
-  
-    const step = steps.find((s) => s.status === "pending");
-    if (step?.type === StepType.CreateFile) {
-      const file = files.find((f) => f.path === step.path);
-      if (file) {
-        
+    // Process pending CreateFile and CreateFolder steps
+    const pendingCreateSteps = steps.filter(step => 
+      step.status === 'pending' && 
+      (step.type === StepType.CreateFile || step.type === StepType.CreateFolder)
+    );
+
+    let updatedFiles = files;
+    let updatedSteps = steps;
+
+    // Process create steps if any exist
+    if (pendingCreateSteps.length > 0) {
+      const processResult = processSteps(steps, files);
+      updatedFiles = processResult.updatedFiles;
+      updatedSteps = processResult.updatedSteps;
+      
+      // Auto-expand newly created folders
+      const newFolders = updatedFiles.filter(file => 
+        file.type === 'folder' && 
+        !files.some(existingFile => existingFile.id === file.id)
+      );
+      
+      if (newFolders.length > 0) {
+        setExpandedFolders(prev => {
+          const newSet = new Set(prev);
+          newFolders.forEach(folder => newSet.add(folder.id));
+          return newSet;
+        });
       }
     }
-  
-  }, [steps,files]);
+
+    // Synchronize file content with step code changes
+    const syncedFiles = syncFileContent(updatedSteps, updatedFiles);
+    
+    // Update states only if there were actual changes
+    if (updatedFiles !== files) {
+      setFiles(syncedFiles);
+    } else if (syncedFiles !== files) {
+      setFiles(syncedFiles);
+    }
+    
+    if (updatedSteps !== steps) {
+      setSteps(updatedSteps);
+    }
+  }, [steps, files]);
 
   useEffect(() => {
     init();
